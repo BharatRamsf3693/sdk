@@ -117,10 +117,22 @@ Copyright (c) .NET Foundation. All rights reserved.
 
   <!--
     For .NET 11+, blazor.webassembly.js is usually provided as a framework static web asset from the package
-    and is automatically materialized by UpdateExistingPackageStaticWebAssets. No custom detection needed.
+    and is automatically materialized during core static web asset resolution.
     For projects (including some .NET 11+ projects) that still use pre-.NET11 packages, we resolve it from
     BlazorWebAssemblyJSPath set by the package .props file.
   -->
+  <Target Name="_FingerprintBlazorWasmFrameworkAssets"
+    Condition="'$(BlazorFingerprintBlazorJs)' == 'true'"
+    AfterTargets="ResolveCoreStaticWebAssets">
+    <ItemGroup>
+      <!-- Package assets use optional fingerprints by default. Standalone publish requires a hard fingerprint
+           so the rewritten HTML and the physical file name agree without a static asset endpoint server. -->
+      <StaticWebAsset Condition="'%(StaticWebAsset.SourceType)' == 'Discovered' and '%(StaticWebAsset.RelativePath)' == '_framework/blazor.webassembly#[.{fingerprint}]?.js'">
+        <RelativePath>_framework/blazor.webassembly#[.{fingerprint}]!.js</RelativePath>
+      </StaticWebAsset>
+    </ItemGroup>
+  </Target>
+
   <Target Name="_ResolveBlazorWasmOutputs"
     Condition="'$(BlazorWebAssemblyJSPath)' != '' Or '$(_TargetingNET110OrLater)' != 'true'"
     DependsOnTargets="ResolveWasmOutputs;ResolveReferences;PrepareResourceNames;ComputeIntermediateSatelliteAssemblies;_BlazorWasmNativeForBuild"
