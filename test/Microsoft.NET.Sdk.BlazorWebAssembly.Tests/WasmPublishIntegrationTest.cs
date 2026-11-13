@@ -1642,6 +1642,24 @@ public class TestReference
 
         [TestMethod]
         [RequiresMSBuildVersion("17.12")]
+        public void Publish_StandaloneBlazorWasm_FingerprintsStartupScript()
+        {
+            var testInstance = CreateAspNetSdkTestAsset("BlazorWasmReferencedByAspNetCoreServer");
+            var publishCommand = CreatePublishCommand(testInstance, "Client");
+            ExecuteCommand(publishCommand).Should().Pass();
+
+            var wwwroot = Path.Combine(publishCommand.GetOutputDirectory(DefaultTfm).ToString(), "wwwroot");
+            var html = File.ReadAllText(Path.Combine(wwwroot, "index.html"));
+            var scriptPath = Regex.Match(html,
+                @"src=""(?<path>_framework/blazor\.webassembly\.[a-z0-9]{10}\.js)""").Groups["path"].Value;
+
+            scriptPath.Should().NotBeNullOrEmpty();
+            html.Should().NotContain("#[.{fingerprint}]");
+            new FileInfo(Path.Combine(wwwroot, scriptPath)).Should().Exist();
+        }
+
+        [TestMethod]
+        [RequiresMSBuildVersion("17.12")]
         [DataRow("")]
         [DataRow("/p:BlazorFingerprintBlazorJs=false")]
         public void Publish_BlazorWasmReferencedByAspNetCoreServer(string publishArg)
